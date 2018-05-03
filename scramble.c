@@ -3,23 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
-
-typedef struct {
-FILE *wordListFile; /**< FILE pointer points to the file that will have words randomly pulled from.*/
-}wordList;
-
-typedef struct {
-char *guessString; /**< Holds malloced char pointer to the current guess. */
-char *correctGuesses; /**< Holds malloced char pointer to what has been guessed correctly so far. */
-char *answer; /**< Holds malloced char pointer to the answer itself. */
-char *scrambled;
-int guessInt;
-int numberOfGuesses; /**< Int to track the total number of unique guesses which is used to keep hangmanAlreadyGuessed up to date. */
-int currentLetter; /**< The letter the player is currently attempting to guess placement of. */
-int answerLength; /**< Int to track the length of the answer which is necessary for any loop that compares to the answer. */
-int isGuessCorrect; /**< Int that acts as a bool, set in isGuessCorrect to decide whether to increment hangmanStrikes. */
-int isEnd; /**< Int that acts as bool, allows me to push checking game end conditions outside the core loop condition */
-}gameState;
+#include "scramble.h"
 
 void trimEndOfString(gameState *game) {
     int ii = 0;
@@ -37,24 +21,30 @@ void seedRandomizer() {
     srand((unsigned) time(&startTime));
 }
 
-void seekWord(wordList *words, gameState *game) {
+void seekWord(gameState *game) {
     char buffer[256];
-    words->wordListFile = fopen("/usr/share/dict/words", "r");
-    fseek(words->wordListFile, 0, SEEK_END);
-    int fileLength = ftell(words->wordListFile);
-    rewind(words->wordListFile);
+    game->wordListFile = fopen("/usr/share/dict/words", "r");
+    fseek(game->wordListFile, 0, SEEK_END);
+    int fileLength = ftell(game->wordListFile);
+    rewind(game->wordListFile);
     int fileRand = rand() % fileLength -1;
-    fseek(words->wordListFile, fileRand, SEEK_SET);
-    char *currentChar = fgets(buffer, 2, words->wordListFile);
+    fseek(game->wordListFile, fileRand, SEEK_SET);
+    char *currentChar = fgets(buffer, 2, game->wordListFile);
     while(*currentChar != '\n' || currentChar == NULL){
-        fseek(words->wordListFile, -2, SEEK_CUR);
-        currentChar = fgets(buffer, 2, words->wordListFile);
+        fseek(game->wordListFile, -2, SEEK_CUR);
+        currentChar = fgets(buffer, 2, game->wordListFile);
     }
-    game->answer = strdup(fgets(buffer, 256, words->wordListFile));
+    game->answer = strdup(fgets(buffer, 256, game->wordListFile));
     trimEndOfString(game);
     game->answerLength = (int)strlen(game->answer);
-    fclose(words->wordListFile);
+    fclose(game->wordListFile);
     //printf("%s", game->hangmanAnswer);
+}
+
+void characterSwap(char *first, char* second) {
+    char temp = *first;
+    *first = *second;
+    *second = temp;
 }
 
 void answerShuffle(gameState *game) {
@@ -66,15 +56,16 @@ void answerShuffle(gameState *game) {
             ii--;
             continue;
         }
-        temp[0] = game->scrambled[ii];
+        characterSwap((game->scrambled + ii), (game->scrambled + randomAddress));
+        /*temp[0] = game->scrambled[ii];
         game->scrambled[ii] = game->scrambled[randomAddress];
         game->scrambled[randomAddress] = temp[0];
-        printf("%d\n", (int)strlen(game->scrambled));
+        printf("%d\n", (int)strlen(game->scrambled));*/
     }
 }
 
 void guessShuffle(gameState *game) {
-    if (game->scrambled[game->currentLetter] == game->answer[game->guessInt]) {
+    /*if (game->scrambled[game->currentLetter] == game->answer[game->guessInt]) {
         game->currentLetter++;
         char temp = game->scrambled[game->currentLetter];
         game->scrambled[game->currentLetter] = game->answer[game->guessInt];
@@ -83,12 +74,27 @@ void guessShuffle(gameState *game) {
                 game->scrambled[ii] = temp;
             }
         }
+    }*/
+    printf("%d %d", game->currentLetter, game->guessInt);
+    if (game->scrambled[game->currentLetter] == game->answer[game->guessInt]) {
+        characterSwap(game->scrambled + game->currentLetter, game->answer + game->guessInt);
+        game->hasBeenUnscrambled[game->currentLetter] = 1;
+        for(int ii = 0; ii <= game->answerLength; ii++) {
+            if (game->scrambled[game->currentLetter] == game->scrambled[ii] && game->hasBeenUnscrambled[ii] == 0) {
+                characterSwap(game->scrambled + ii, game->answer + game->guessInt);
+                game->currentLetter++;
+                return;
+            }
+        }
     }
-}
+}// Store game->answer[guessInt] as char and swap with first match?
+// Swap from answer to scrambled then search scrambled and swap to answer?
 
 void createGameState(gameState *game) {
     game->guessString = malloc(1024);//healthy buffer size in case someone gets silly with how long their guess is
     game->guessString[0] = '1';//safe default guess
+    game->hasBeenUnscrambled = calloc(game->answerLength, sizeof(int));
+    for (int ii = 0; ii < game->answerLength; ii++)
     game->guessInt = 0;
     game->isEnd = 0;
     game->currentLetter = 0;
@@ -109,7 +115,7 @@ void getGuess(gameState *game) {
     }
     trimGuess(game);
     game->guessInt = atoi(game->guessString);
-    game->numberOfGuesses++;
+    //game->numberOfGuesses++;
 }
 
 void isUnshuffled(gameState *game) {
@@ -123,11 +129,10 @@ void isUnshuffled(gameState *game) {
 
 int main() {
     seedRandomizer();
-    wordList words;
     gameState game;
+    seekWord(&game);
+    trimEndOfString(&game);//Also called in seekWord, remove and test
     createGameState(&game);
-    seekWord(&words, &game);
-    trimEndOfString(&game);
     printf("%s\n", game.answer);
     answerShuffle(&game);
     //int numberofplays = 0;
