@@ -75,7 +75,8 @@ void guessShuffle(gameState *game) {
             }
         }
     }*/
-    printf("%d %d", game->currentLetter, game->guessInt);
+    /*printf("%d %d %c %c", game->currentLetter, game->guessInt, game->scrambled[game->currentLetter], game->answer[game->guessInt]);
+    fflush(stdout);
     if (game->scrambled[game->currentLetter] == game->answer[game->guessInt]) {
         characterSwap(game->scrambled + game->currentLetter, game->answer + game->guessInt);
         game->hasBeenUnscrambled[game->currentLetter] = 1;
@@ -84,6 +85,15 @@ void guessShuffle(gameState *game) {
                 characterSwap(game->scrambled + ii, game->answer + game->guessInt);
                 game->currentLetter++;
                 return;
+            }
+        }
+    }*/
+    if (game->scrambled[game->currentLetter] == game->answer[game->guessInt]) {
+        for (int ii = game->currentLetter; ii <= game->answerLength; ii++) {
+            if (game->scrambled[ii] == game->answer[game->guessInt] && game->hasBeenUnscrambled[ii] == 0) {
+                characterSwap(game->scrambled + ii, game->scrambled + game->currentLetter);
+                game->hasBeenUnscrambled[game->currentLetter] = 1;
+                game->currentLetter++;
             }
         }
     }
@@ -138,6 +148,7 @@ int main() {
     //int numberofplays = 0;
     while(game.isEnd != 1) {
         printf("Unscramble: %s\n", game.scrambled);
+        printf("What position should this letter be in: %c\n", game.scrambled[game.currentLetter]);
         getGuess(&game);
         guessShuffle(&game);
         printf("%d\n", game.currentLetter);

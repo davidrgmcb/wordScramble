@@ -13,7 +13,7 @@ all: scramble
 	gcc -c $(CFLAGS) $< -o $@
 
 hangman: $(OBJECTS)
-	gcc $(OBJECTS) -o $@
+	gcc $(OBJECTS) $(CFLAGS) -o $@
 
 clean:
 	-rm -f $(OBJECTS)
