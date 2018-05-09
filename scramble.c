@@ -65,38 +65,18 @@ void answerShuffle(gameState *game) {
 }
 
 void guessShuffle(gameState *game) {
-    /*if (game->scrambled[game->currentLetter] == game->answer[game->guessInt]) {
+    if(game->hasBeenUnscrambled[game->currentLetter] == 1) {
         game->currentLetter++;
-        char temp = game->scrambled[game->currentLetter];
-        game->scrambled[game->currentLetter] = game->answer[game->guessInt];
-        for(int ii = game->currentLetter + 1; ii <= game->answerLength; ii++) {
-            if (game->scrambled[game->currentLetter] == game->scrambled[ii]) {
-                game->scrambled[ii] = temp;
-            }
-        }
-    }*/
-    /*printf("%d %d %c %c", game->currentLetter, game->guessInt, game->scrambled[game->currentLetter], game->answer[game->guessInt]);
-    fflush(stdout);
-    if (game->scrambled[game->currentLetter] == game->answer[game->guessInt]) {
-        characterSwap(game->scrambled + game->currentLetter, game->answer + game->guessInt);
-        game->hasBeenUnscrambled[game->currentLetter] = 1;
-        for(int ii = 0; ii <= game->answerLength; ii++) {
-            if (game->scrambled[game->currentLetter] == game->scrambled[ii] && game->hasBeenUnscrambled[ii] == 0) {
-                characterSwap(game->scrambled + ii, game->answer + game->guessInt);
-                game->currentLetter++;
-                return;
-            }
-        }
-    }*/
-    if (game->scrambled[game->currentLetter] == game->answer[game->guessInt]) {
-        for (int ii = game->currentLetter; ii <= game->answerLength; ii++) {
-            if (game->scrambled[ii] == game->answer[game->guessInt] && game->hasBeenUnscrambled[ii] == 0) {
-                characterSwap(game->scrambled + ii, game->scrambled + game->currentLetter);
-                game->hasBeenUnscrambled[game->currentLetter] = 1;
-                game->currentLetter++;
-            }
+    }
+    else if (game->scrambled[game->currentLetter] == game->answer[game->guessInt] && game->hasBeenUnscrambled[game->guessInt] == 0 /*&& game->scrambled[game->currentLetter]
+    != game->answer[game->currentLetter]*/) {
+        characterSwap(game->scrambled + game->currentLetter, game->scrambled + game->guessInt);
+        if (game->scrambled[game->currentLetter] == game->answer[game->currentLetter]) {
+            game->hasBeenUnscrambled[game->currentLetter] = 1;
+            game->currentLetter++;
         }
     }
+    //Maybe make this a hard mode since it offers less guarantee that you can unscramble the beginning and people kinda read through non obvious words left to right*/
 }// Store game->answer[guessInt] as char and swap with first match?
 // Swap from answer to scrambled then search scrambled and swap to answer?
 
@@ -113,7 +93,8 @@ void createGameState(gameState *game) {
 
 void trimGuess(gameState *game) {
     if ((int)strlen(game->guessString) > (game->answerLength)) {
-        game->guessString[game->answerLength] = '\0';
+        //game->guessString[game->answerLength] = '\0';
+        printf("Your guess is too high, guess changed to %d.", game->answerLength);
     } 
 }
 
@@ -123,8 +104,18 @@ void getGuess(gameState *game) {
         printf("Please enter a number, no letters or symbols\n");
         getGuess(game);
     }
-    trimGuess(game);
-    game->guessInt = atoi(game->guessString);
+    //trimGuess(game);
+    if (atoi(game->guessString) > game->answerLength) {
+        game->guessInt = (game->answerLength - 1);
+        printf("Your guess is too high, guess changed to %d.\n", game->answerLength);
+    }
+    else if (atoi(game->guessString) < 0) {
+        game->guessInt = 0;
+        printf("Your guess is too low, guess changed to 1.\n");
+    }
+    else if (atoi(game->guessString) > 0) {
+        game->guessInt = (atoi(game->guessString) - 1);
+    }
     //game->numberOfGuesses++;
 }
 
@@ -156,4 +147,5 @@ int main() {
         //numberofplays++;
         isUnshuffled(&game);
     }
+    printf("Congratulations! The answer was: %s.\n", game.answer);
 }
