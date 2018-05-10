@@ -38,7 +38,6 @@ void seekWord(gameState *game) {
     trimEndOfString(game);
     game->answerLength = (int)strlen(game->answer);
     fclose(game->wordListFile);
-    //printf("%s", game->hangmanAnswer);
 }
 
 void characterSwap(char *first, char* second) {
@@ -48,63 +47,47 @@ void characterSwap(char *first, char* second) {
 }
 
 void answerShuffle(gameState *game) {
-    char temp[1];
     game->scrambled = strdup(game->answer);
     for(int ii = 0; ii <= (game->answerLength - 1); ii++) {
-        int randomAddress = ((rand() % game->answerLength)); //Hasty fix, rework to proper knuth/fisher yates shuffle
+        int randomAddress = ((rand() % game->answerLength)); //Maybe rework to proper knuth/fisher yates shuffle but scrambles enough for this purpose
         if (game->scrambled[randomAddress] == '\0') {
             ii--;
             continue;
         }
         characterSwap((game->scrambled + ii), (game->scrambled + randomAddress));
-        /*temp[0] = game->scrambled[ii];
-        game->scrambled[ii] = game->scrambled[randomAddress];
-        game->scrambled[randomAddress] = temp[0];
-        printf("%d\n", (int)strlen(game->scrambled));*/
     }
 }
 
 void guessShuffle(gameState *game) {
     if(game->hasBeenUnscrambled[game->currentLetter] == 1) {
         game->currentLetter++;
+        return;
     }
-    else if (game->scrambled[game->currentLetter] == game->answer[game->guessInt] && game->hasBeenUnscrambled[game->guessInt] == 0 /*&& game->scrambled[game->currentLetter]
-    != game->answer[game->currentLetter]*/) {
+    else if (game->scrambled[game->currentLetter] == game->answer[game->guessInt] && game->hasBeenUnscrambled[game->guessInt] == 0) {
         characterSwap(game->scrambled + game->currentLetter, game->scrambled + game->guessInt);
+        game->hasBeenUnscrambled[game->guessInt] = 1;
         if (game->scrambled[game->currentLetter] == game->answer[game->currentLetter]) {
             game->hasBeenUnscrambled[game->currentLetter] = 1;
             game->currentLetter++;
         }
     }
-    //Maybe make this a hard mode since it offers less guarantee that you can unscramble the beginning and people kinda read through non obvious words left to right*/
-}// Store game->answer[guessInt] as char and swap with first match?
-// Swap from answer to scrambled then search scrambled and swap to answer?
+}//Maybe make this a hard mode since it offers less guarantee that you can unscramble the beginning and people kinda read through non obvious words left to right*/
 
 void createGameState(gameState *game) {
     game->guessString = malloc(1024);//healthy buffer size in case someone gets silly with how long their guess is
     game->guessString[0] = '1';//safe default guess
     game->hasBeenUnscrambled = calloc(game->answerLength, sizeof(int));
-    for (int ii = 0; ii < game->answerLength; ii++)
     game->guessInt = 0;
     game->isEnd = 0;
     game->currentLetter = 0;
-    //game->correctGuesses = malloc(sizeof(char) * (game->answerLength + 1));
-}
-
-void trimGuess(gameState *game) {
-    if ((int)strlen(game->guessString) > (game->answerLength)) {
-        //game->guessString[game->answerLength] = '\0';
-        printf("Your guess is too high, guess changed to %d.", game->answerLength);
-    } 
 }
 
 void getGuess(gameState *game) {
-    game->guessString = fgets(game->guessString, 1024, stdin);//gigantobuffer that gets hacked off immediately
+    game->guessString = fgets(game->guessString, 1024, stdin);//gigantobuffer
     if (isdigit(game->guessString[0]) == 0) {//Rejects answers that aren't numbers
         printf("Please enter a number, no letters or symbols\n");
         getGuess(game);
     }
-    //trimGuess(game);
     if (atoi(game->guessString) > game->answerLength) {
         game->guessInt = (game->answerLength - 1);
         printf("Your guess is too high, guess changed to %d.\n", game->answerLength);
@@ -116,7 +99,6 @@ void getGuess(gameState *game) {
     else if (atoi(game->guessString) > 0) {
         game->guessInt = (atoi(game->guessString) - 1);
     }
-    //game->numberOfGuesses++;
 }
 
 void isUnshuffled(gameState *game) {
@@ -132,19 +114,15 @@ int main() {
     seedRandomizer();
     gameState game;
     seekWord(&game);
-    trimEndOfString(&game);//Also called in seekWord, remove and test
     createGameState(&game);
     printf("%s\n", game.answer);
     answerShuffle(&game);
-    //int numberofplays = 0;
     while(game.isEnd != 1) {
         printf("Unscramble: %s\n", game.scrambled);
         printf("What position should this letter be in: %c\n", game.scrambled[game.currentLetter]);
         getGuess(&game);
         guessShuffle(&game);
-        printf("%d\n", game.currentLetter);
-        //printf("%d\n", numberofplays);
-        //numberofplays++;
+        printf("Currently on letter number: %d\n", game.currentLetter);
         isUnshuffled(&game);
     }
     printf("Congratulations! The answer was: %s.\n", game.answer);

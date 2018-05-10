@@ -1,29 +1,20 @@
 /** @file scramble.h
  * @brief Currently contains all of the function protoypes for a simple word scrambling game and its gameState struct.
- * 
- * I regret that I need two swap functions but a random scramble and swapping specific letters require two different
- * approaches. Might split the gameState struct up a bit as it is basically the entire program by itself.
- * 
  * @author David McBurney
- * @bug Incomplete, currently nonfunctional
+ * @bug None documented
  */
 
 /** @struct gameState.h
  * @brief Contains all of the variables concerning the game as of current.
- * This struct may get split into two, possibly one for the game and correct answer
- * and one for the scrambled word? As of now though it contains the entire program
- * since it absorbed the wordListFile FILE pointer.
  */
 typedef struct {
 char *guessString; /**< Holds malloced char pointer to the current guess. */
-char *correctGuesses; /**< Holds malloced char pointer to what has been guessed correctly so far. */
 char *answer; /**< Holds malloced char pointer to the answer itself. */
 char *scrambled; /**< A muxed up version of answer, malloced via strdup */
-int *hasBeenUnscrambled;
+int *hasBeenUnscrambled; /**< Array of ints acting as bools same length as answer, used to mark an array address as having already been correctly unscrambled */
 int guessInt; /**< An int conversion of the string the player enters as their guess. */
 int currentLetter; /**< The letter the player is currently attempting to guess placement of. */
 int answerLength; /**< Int to track the length of the answer which is necessary for any loop that compares to the answer. */
-int isGuessCorrect; /**< Int that acts as a bool, may use to set collision array, my toss out. */
 int isEnd; /**< Int that acts as bool, allows me to push checking game end conditions outside the core loop condition */
 FILE *wordListFile; /**< FILE pointer points to the file that will have words randomly pulled from.*/
 }gameState;
@@ -45,26 +36,69 @@ void trimEndOfString(gameState *game);
  */
 void seedRandomizer();
 
-/** @brief Seeks through file to find a random word and copies it to game.answer, copies trimEndOfString on game.answer and assigns game.answerLength
+/** @brief Seeks through file to find a random word and copies it to game.answer, calls trimEndOfString on game.answer and assigns game.answerLength
  * Opens wordListFile file pointer, finds the files length by seeking the end and then seeks a random point in that length.
  * From that random point it looks for a newline by seeking backwards then fgets a string up to a max length of 256 characters once that newline is found.
  * That fgets is strduped to game.answer which then has trimEndOfString called on it. Once that's done game.answerLength is assigned and the
- * file pointer is closed, ending the funciton.
+ * file pointer is closed, and the function ends.
  * @param gameState *game, assigns game.answer and game.answerLength, opens and closes wordListFile FILE pointer.
- * @reutrn Void
+ * @return Void
  */
 void seekWord(gameState *game);
 
+/** @brief Takes two char pointers to individual letters and swaps them.
+ * As traditional as character swap functions get. Copies the letter at the first address to char temp,
+ * it then copies the letter at the second address to the first address and copies the letter in temp tothe second address.
+ * @param char *first, a character whose address you want swapped. In this program it always takes in one provided by game->scrambled.
+ * @param char *second, a character whose address you want swapped. In this program it always takes in one provided by game->scrambled.
+ * @return Void
+ */
 void characterSwap(char *first, char* second);
 
+/** @brief Randomly mixes up letters in a word until it has moved all of them around at least once.
+ * Starts by strduping game->answer to game->scrambled, it then loops through scrambled and selects
+ * "random" addresses to call characterSwap on in combination with where it is in the for loop.
+ * If the "random" address it generates is the address of the terminating character it decrements and continues the loop
+ * Repeat until it has "randomly" swapped eerything other than the terminating character.
+ * @param gameState *game, it duplicates what's in game.answer to assign game.scrambled then mixes up what's in game.scrambled.
+ * @return Void
+ */
 void answerShuffle(gameState *game);
 
+/** @brief Swaps letters if the player guesses the correct position of game.shuffled[currentLetter]
+ * Immediately checks if game->hasBeenUnshuffled[currentLetter] is true. If it is it increments currentLetter and returns.
+ * If this isn't the case but game->scrambled[currentLetter] is the same letter as game->answer[guessInt] character swap is
+ * called on game->scrambled + currentLetter and game->scrambled + guessInt. game->hasBeenUnscrambled[guessInt] is set to 1
+ * and then a check is done on whether the new letter at scrambled[currentLetter] is correct. If this is the case the 
+ * game sets hasBeenUnscrambled[currentLetter] to 1 and increments currentLetter
+ * @param gameState *game, swaps characters around in game.scrambled and checks against game.answer
+ * @return Void
+ */
 void guessShuffle(gameState *game);
 
+/** @brief Assigns default values in the gameState struct and memory to the various arrays in it.
+ * First memory is assigned for guessString and a default value of '1' is assigned to guessString.
+ * hasBeenUnscrambled is then calloced to make sure it has 0 for its values to start with.
+ * A default value of 0 is then given to guessInt, isEnd and currentLetter.
+ * @param gameState *game, assigns values, memory or both to guessString, hasBeenUnscrambled, guessInt, isEnd and currentLetter
+ * @return Void
+ */
 void createGameState(gameState *game);
 
-void trimGuess(gameState *game);
-
+/** @brief takes a player guess checks if that guess isdigit and then convers it to an int if that's the case.
+ * First fgets is used to get a guess from the player which is assigned to game.guessString. isDigit is called on
+ * the first character in guessString to make sure there at least is a number in it. atoi is then called on guessString
+ * if the number is too small or too large it is changed to 1 or game.answerLength respectively and assigned to guessInt. 
+ * Otherwise the return value of atoi is assigned to guessInt.
+ * @param gameState *game, assigns guessString and guessInt.
+ * @return Void
+ */
 void getGuess(gameState *game);
 
+/** @brief Loops through game.answer and game.answer to check if they are equal
+ * Pretty much what the brief says. Loops through comparing letters between game.scrambled and game.answer.
+ * If any letter fails to match the function returns, if they all match, isEnd is set to 1, in turn terminating he main loop.
+ * @param gameState *game, loops though answer andscrambled, sets isEnd.
+ * @return Void
+ */
 void isUnshuffled(gameState *game);
